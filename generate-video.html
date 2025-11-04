@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Particle Video Generator</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        h1 {
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #D4A574;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #D4A574;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: #D4A574;
+            color: #2a2a2a;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #F4B574;
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(212, 165, 116, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(212, 165, 116, 0.3);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Particle Animation Generator</h1>
+        
+        <div class="input-group">
+            <label>Resolution:</label>
+            <select id="resolution">
+                <option value="1920x1080">1080p (1920x1080)</option>
+                <option value="3840x2160">4K (3840x2160)</option>
+                <option value="1280x720">720p (1280x720)</option>
+                <option value="custom">Custom...</option>
+            </select>
+        </div>
+
+        <div class="input-group" id="customSize" style="display: none;">
+            <label>Width x Height:</label>
+            <input type="text" id="customRes" placeholder="1920x1080">
+        </div>
+
+        <div class="input-group">
+            <label>Duration (seconds):</label>
+            <input type="number" id="duration" value="10" min="1" max="60">
+        </div>
+
+        <div class="input-group">
+            <label>Frame Rate:</label>
+            <select id="fps">
+                <option value="30">30 FPS</option>
+                <option value="24">24 FPS</option>
+                <option value="60">60 FPS</option>
+            </select>
+        </div>
+
+        <button id="generateBtn">Generate Video</button>
+        <div class="status" id="status">Ready to generate</div>
+    </div>
+
+    <script>
+        const resSelect = document.getElementById('resolution');
+        const customSize = document.getElementById('customSize');
+        const customRes = document.getElementById('customRes');
+        const duration = document.getElementById('duration');
+        const fps = document.getElementById('fps');
+        const generateBtn = document.getElementById('generateBtn');
+        const status = document.getElementById('status');
+
+        resSelect.addEventListener('change', (e) => {
+            customSize.style.display = e.target.value === 'custom' ? 'block' : 'none';
+        });
+
+        function parseDimensions(str) {
+            const [w, h] = str.split('x').map(Number);
+            return { width: w, height: h };
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            const resolution = resSelect.value === 'custom' 
+                ? customRes.value 
+                : resSelect.value;
+            
+            const dims = parseDimensions(resolution);
+            const dur = parseFloat(duration.value);
+            const frameRate = parseInt(fps.value);
+
+            if (!dims.width || !dims.height || dims.width < 100 || dims.height < 100) {
+                status.textContent = '❌ Invalid dimensions';
+                return;
+            }
+
+            generateBtn.disabled = true;
+            status.textContent = '⏳ Generating video... (this may take a while)';
+
+            try {
+                // Create canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = dims.width;
+                canvas.height = dims.height;
+                const ctx = canvas.getContext('2d');
+
+                // Initialize particles with fixed seed for consistency
+                const particles = [];
+                for (let i = 0; i < 100; i++) {
+                    particles.push({
+                        x: Math.random() * dims.width,
+                        y: Math.random() * dims.height,
+                        vx: (Math.random() - 0.5) * 2,
+                        vy: (Math.random() - 0.5) * 2,
+                        radius: Math.random() * 3 + 2,
+                    });
+                }
+
+                const connectionDistance = 150;
+                const totalFrames = Math.ceil(dur * frameRate);
+
+                // Create stream and recorder
+                const stream = canvas.captureStream(frameRate);
+                const chunks = [];
+                
+                let mimeType = 'video/webm';
+                if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+                    mimeType = 'video/webm;codecs=vp9';
+                } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                    mimeType = 'video/webm;codecs=vp8';
+                }
+
+                const recorder = new MediaRecorder(stream, { mimeType });
+                
+                recorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) chunks.push(e.data);
+                };
+
+                recorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `particle-${dims.width}x${dims.height}-${dur}s-${frameRate}fps.webm`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    
+                    status.textContent = '✅ Video downloaded! Use convert-video.js to convert to MP4 for TV.';
+                    generateBtn.disabled = false;
+                };
+
+                // Start recording
+                recorder.start();
+                
+                let frame = 0;
+                const renderFrame = () => {
+                    if (frame >= totalFrames) {
+                        recorder.stop();
+                        return;
+                    }
+
+                    // Clear with trail effect
+                    ctx.fillStyle = 'rgba(42, 25, 13, 0.15)';
+                    ctx.fillRect(0, 0, dims.width, dims.height);
+
+                    // Update and draw particles
+                    particles.forEach(p => {
+                        p.x += p.vx;
+                        p.y += p.vy;
+
+                        if (p.x - p.radius < 0 || p.x + p.radius > dims.width) {
+                            p.vx *= -1;
+                            p.x = Math.max(p.radius, Math.min(dims.width - p.radius, p.x));
+                        }
+                        if (p.y - p.radius < 0 || p.y + p.radius > dims.height) {
+                            p.vy *= -1;
+                            p.y = Math.max(p.radius, Math.min(dims.height - p.radius, p.y));
+                        }
+
+                        ctx.fillStyle = '#D4A574';
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+
+                    // Draw connections
+                    ctx.strokeStyle = 'rgba(139, 90, 43, 0.4)';
+                    ctx.lineWidth = 1.5;
+                    for (let i = 0; i < particles.length; i++) {
+                        for (let j = i + 1; j < particles.length; j++) {
+                            const dx = particles[i].x - particles[j].x;
+                            const dy = particles[i].y - particles[j].y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            if (distance < connectionDistance) {
+                                ctx.beginPath();
+                                ctx.moveTo(particles[i].x, particles[i].y);
+                                ctx.lineTo(particles[j].x, particles[j].y);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+
+                    frame++;
+                    
+                    // Progress update
+                    if (frame % 30 === 0) {
+                        const progress = ((frame / totalFrames) * 100).toFixed(1);
+                        status.textContent = `⏳ Generating: ${progress}%`;
+                    }
+
+                    setTimeout(renderFrame, 1000 / frameRate);
+                };
+
+                renderFrame();
+
+            } catch (error) {
+                status.textContent = '❌ Error: ' + error.message;
+                generateBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
+
