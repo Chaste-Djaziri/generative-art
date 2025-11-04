@@ -9,6 +9,8 @@ export function VoronoiIllumCanvas() {
   useEffect(() => {
     if (!containerRef.current || typeof window === "undefined") return
 
+    const container = containerRef.current
+
     // Dynamically import p5 to avoid SSR issues
     import("p5").then((p5Module) => {
       const p5 = p5Module.default
@@ -19,7 +21,7 @@ export function VoronoiIllumCanvas() {
         let prev: any, next: any, sz: number
         let show = "illum"
         let cnv: any
-        const num = 7
+        const num = 30
         let t_var = 8
 
         // Shader sources
@@ -56,10 +58,21 @@ float rand(vec2 co){
 }
 
 vec3 regionColor(float regionId) {
-    float r = rand(vec2(regionId,1.));
-    float g = rand(vec2(regionId,2.));
-    float b = rand(vec2(regionId,3.));
-    return vec3 (r,g,b);
+    // Brown/chocolate color palette
+    vec3 palette[10] = vec3[](
+        vec3(0.235, 0.141, 0.078),  // #3C2414 dark chocolate
+        vec3(0.290, 0.176, 0.102),  // #4A2C17 espresso
+        vec3(0.365, 0.227, 0.122),  // #5D3A1F cocoa
+        vec3(0.420, 0.267, 0.137),  // #6B4423 mocha
+        vec3(0.490, 0.306, 0.180),  // #7D4E2E dark chocolate
+        vec3(0.545, 0.373, 0.235),  // #8B5F3C milk chocolate
+        vec3(0.620, 0.420, 0.290),  // #9D6B47 caramel
+        vec3(0.651, 0.486, 0.322),  // #A67C52 hazelnut
+        vec3(0.831, 0.647, 0.455),  // #D4A574 champagne
+        vec3(0.910, 0.792, 0.604)   // #E8C19A light champagne
+    );
+    int index = int(mod(regionId * 10.0, 10.0));
+    return palette[index];
 }
 
 void main() {
@@ -73,7 +86,7 @@ void main() {
         gl_FragColor = vec4(regionColor(pixel.a), 0.9);
     }
     else {
-        gl_FragColor = vec4(1.);
+        gl_FragColor = vec4(0.165, 0.094, 0.047, 1.); // Dark brown background #2A1810
     }
 }`
 
@@ -267,19 +280,28 @@ void main() {
         float id = hit.y;
         if(id > 0.) {
             if (mod(id, 2.) < 0.01) {
-                if (dist > 0.01) pixel_col += vec3((MAX_DIST-min(dist,MAX_DIST))/MAX_DIST);
+                if (dist > 0.01) {
+                    float intensity = (MAX_DIST-min(dist,MAX_DIST))/MAX_DIST;
+                    pixel_col += vec3(intensity, intensity * 0.8, intensity * 0.6); // Warm brown/golden gradient
+                }
                 else {
-                    gl_FragColor = vec4(1.,1.,1.,1.);
+                    gl_FragColor = vec4(0.831, 0.647, 0.455, 1.); // Warm champagne light
                     return;
                 }
             }
         }
     }
-    gl_FragColor = vec4 (lin_to_srgb(pixel_col / float(RAYS_PER_PIXEL)), 1.);
+    // Use warm brown/golden light color instead of white
+    vec3 warmLight = vec3(0.831, 0.647, 0.455); // Champagne #D4A574
+    vec3 lightColor = mix(warmLight * 0.5, warmLight, pixel_col.r / float(RAYS_PER_PIXEL));
+    gl_FragColor = vec4 (lin_to_srgb(lightColor), 1.);
 }`
 
         p.setup = () => {
-          cnv = p.createCanvas(920, 690, p.WEBGL)
+          // Use full window dimensions
+          const containerWidth = container?.clientWidth || window.innerWidth
+          const containerHeight = container?.clientHeight || window.innerHeight
+          cnv = p.createCanvas(containerWidth, containerHeight, p.WEBGL)
           
           p.pixelDensity(1)
           sz = p.min(p.width, p.height)
@@ -306,6 +328,14 @@ void main() {
           })
         }
 
+        p.windowResized = () => {
+          // Resize canvas to full window dimensions
+          const containerWidth = container?.clientWidth || window.innerWidth
+          const containerHeight = container?.clientHeight || window.innerHeight
+          p.resizeCanvas(containerWidth, containerHeight)
+          sz = p.min(p.width, p.height)
+        }
+
         p.mouseClicked = () => {
           t_var++
           const monthStr = String(p.month() + 1).padStart(2, "0")
@@ -330,88 +360,45 @@ void main() {
 
         p.draw = () => {
           const t = p.millis() * 0.0001
+          
+          // Dark brown background
+          p.background(0.165 * 255, 0.094 * 255, 0.047 * 255) // #2A1810 dark brown
+          
           p.noStroke()
+          
+          // Brown/chocolate color palette for lights
+          const colors = [
+            [0.831, 0.647, 0.455],  // #D4A574 champagne
+            [0.910, 0.792, 0.604],  // #E8C19A light champagne
+            [0.620, 0.420, 0.290],  // #9D6B47 caramel
+            [0.651, 0.486, 0.322],  // #A67C52 hazelnut
+            [0.545, 0.373, 0.235],  // #8B5F3C milk chocolate
+            [0.490, 0.306, 0.180],  // #7D4E2E
+          ]
 
-          // Paint pixels
-          paintShader.setUniform("u_color", [0, 0, 0, 1])
-          p.shader(paintShader)
-          prev.begin()
-          p.clear()
+          // Draw simple moving lights
           p.noiseSeed(0.5)
-
           for (let i = 0; i < num; i += 1) {
-            paintShader.setUniform("u_color", [0, 0, 0, i + 1])
             const x = p.map(p.noise(i * 10, 0, t), 0, 1, -p.width / 2, p.width / 2)
             const y = p.map(p.noise(i * 10, 100, t), 0, 1, -p.height / 2, p.height / 2)
+            const angle = p.map(p.noise(i * 10, 1000, t * 4), 0, 1, -p.PI, p.PI)
+            
+            const colorIndex = i % colors.length
+            const color = colors[colorIndex]
+            p.fill(color[0] * 255, color[1] * 255, color[2] * 255)
+            
             p.push()
             p.translate(x, y)
-            p.rotate(p.map(p.noise(i * 10, 1000, t * 4), 0, 1, -p.PI, p.PI))
+            p.rotate(angle)
             p.rect(-40, -5, 80, 10)
             p.pop()
-          }
-          prev.end()
-
-          // Jump flood passes
-          for (let i = 12; i >= 0; i--) {
-            next.begin()
-            p.clear()
-            p.shader(floodShader)
-            floodShader.setUniform("u_tex", prev.color)
-            floodShader.setUniform("u_step", 1 << i)
-            floodShader.setUniform("u_pixel", [1 / p.width, 1 / p.height])
-            p.plane(p.width, p.height)
-            next.end()
-            ;[next, prev] = [prev, next]
-          }
-
-          // Display
-          if (show === "voronoi") {
-            p.shader(voronoiShader)
-            voronoiShader.setUniform("u_tex", prev.color)
-            voronoiShader.setUniform("u_pixel", [1 / p.width, 1 / p.height])
-            p.plane(p.width, p.height)
-          } else {
-            // Compute distance field
-            next.begin()
-            p.clear()
-            p.shader(distanceShader)
-            distanceShader.setUniform("u_tex", prev.color)
-            distanceShader.setUniform("u_pixel", [1 / p.width, 1 / p.height])
-            p.plane(p.width, p.height)
-            next.end()
-
-            // Display the distances
-            prev.begin()
-            p.clear()
-            if (show === "distance") {
-              p.shader(distanceShowShader)
-              distanceShowShader.setUniform("u_tex", next.color)
-              p.plane(p.width, p.height)
-            } else {
-              p.shader(illumShader)
-              illumShader.setUniform("u_tex", next.color)
-              illumShader.setUniform("u_pixel", [1 / p.width, 1 / p.height])
-              illumShader.setUniform("u_time", t)
-              p.plane(p.width, p.height)
-            }
-            prev.end()
-
-            next.begin()
-            p.shader(blurShader)
-            blurShader.setUniform("u_tex", prev.color)
-            blurShader.setUniform("u_pixel", [1 / p.width, 1 / p.height])
-            p.plane(p.width, p.height)
-            next.end()
-
-            p.shader(blurShader)
-            blurShader.setUniform("u_tex", next.color)
-            blurShader.setUniform("u_pixel", [1 / p.width, 1 / p.height])
-            p.plane(p.width, p.height)
           }
         }
       }
 
-      sketchRef.current = new p5(sketch, containerRef.current)
+      if (containerRef.current) {
+        sketchRef.current = new p5(sketch, containerRef.current)
+      }
     })
 
     return () => {
@@ -421,5 +408,5 @@ void main() {
     }
   }, [])
 
-  return <div ref={containerRef} className="w-full h-full" />
+  return <div ref={containerRef} className="w-full h-full overflow-hidden" />
 }

@@ -9,6 +9,8 @@ export function BlackWhiteGeometricCanvas() {
   useEffect(() => {
     if (!containerRef.current || typeof window === "undefined") return
 
+    const container = containerRef.current
+
     // Dynamically import p5 to avoid SSR issues
     import("p5").then((p5Module) => {
       const p5 = p5Module.default
@@ -322,10 +324,17 @@ export function BlackWhiteGeometricCanvas() {
 
         p.setup = () => {
           p.randomSeed(seed)
-          mySize = p.min(p.windowWidth, p.windowHeight) * 0.8
+          // Use container's actual dimensions to prevent overflow
+          const containerWidth = container?.clientWidth || window.innerWidth
+          const containerHeight = container?.clientHeight || window.innerHeight
+          p.createCanvas(containerWidth, containerHeight, p.WEBGL)
+          // Zoom out by increasing orthographic bounds, centered around 0,0
+          const zoomFactor = 2.0
+          p.ortho(-p.width * zoomFactor, p.width * zoomFactor, -p.height * zoomFactor, p.height * zoomFactor, -5000, 5000)
+
+          // Use min dimension for geometric scaling calculations
+          mySize = p.min(p.windowWidth, p.windowHeight)
           margin = mySize / 100
-          p.createCanvas(mySize, mySize, p.WEBGL)
-          p.ortho(-p.width / 2, p.width / 2, -p.height / 2, p.height / 2, -5000, 5000)
 
           myGraphic = p.createGraphics(mySize / 2, mySize / 2)
           frontGraphic = p.createGraphics(mySize / 2, mySize / 2)
@@ -363,10 +372,17 @@ export function BlackWhiteGeometricCanvas() {
         }
 
         p.windowResized = () => {
-          mySize = p.min(p.windowWidth, p.windowHeight) * 0.8
+          // Use container's actual dimensions to prevent overflow
+          const containerWidth = container?.clientWidth || window.innerWidth
+          const containerHeight = container?.clientHeight || window.innerHeight
+          p.resizeCanvas(containerWidth, containerHeight)
+          // Zoom out by increasing orthographic bounds, centered around 0,0
+          const zoomFactor = 2.0
+          p.ortho(-p.width * zoomFactor, p.width * zoomFactor, -p.height * zoomFactor, p.height * zoomFactor, -5000, 5000)
+
+          // Update mySize for geometric scaling calculations
+          mySize = p.min(p.windowWidth, p.windowHeight)
           margin = mySize / 100
-          p.resizeCanvas(mySize, mySize)
-          p.ortho(-p.width / 2, p.width / 2, -p.height / 2, p.height / 2, -5000, 5000)
 
           myGraphic = p.createGraphics(mySize / 2, mySize / 2)
           frontGraphic = p.createGraphics(mySize / 2, mySize / 2)
@@ -402,5 +418,5 @@ export function BlackWhiteGeometricCanvas() {
     }
   }, [])
 
-  return <div ref={containerRef} className="w-full h-full" />
+  return <div ref={containerRef} className="w-full h-full overflow-hidden" />
 }

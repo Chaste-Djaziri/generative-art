@@ -8,8 +8,8 @@ import { VoronoiIllumCanvas } from "@/components/voronoi-illum-canvas"
 
 export default function Home() {
   return (
-    <main className="w-full h-screen bg-gradient-to-br from-amber-950 via-amber-900 to-amber-950">
-      <RailwayCanvas />
+    <main className="fixed inset-0 w-screen h-screen bg-gradient-to-br from-amber-950 via-amber-900 to-amber-950">
+      <VoronoiIllumCanvas />
     </main>
   )
 }

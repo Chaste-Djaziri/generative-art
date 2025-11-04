@@ -81,10 +81,12 @@ export function SymmetryCanvas() {
           seed = Math.random() * p.sq(p.sq(p.sq(p.int(p.TAU))))
           p.randomSeed(seed)
 
-          mySize = p.min(p.windowWidth, p.windowHeight) * 0.9
-
-          p.createCanvas(mySize, mySize, p.WEBGL)
+          // Use full window dimensions for canvas
+          p.createCanvas(p.windowWidth, p.windowHeight, p.WEBGL)
           p.perspective(0.5, p.width / p.height, 5, 10000)
+
+          // Use min dimension for geometric scaling calculations
+          mySize = p.min(p.windowWidth, p.windowHeight)
 
           palette = p.random(colorScheme).colors.concat()
           p.background(p.random(bgcolor))
@@ -196,8 +198,10 @@ export function SymmetryCanvas() {
         }
 
         p.windowResized = () => {
-          mySize = p.min(p.windowWidth, p.windowHeight) * 0.9
-          p.resizeCanvas(mySize, mySize)
+          // Resize canvas to full window dimensions
+          p.resizeCanvas(p.windowWidth, p.windowHeight)
+          // Update mySize for geometric scaling calculations
+          mySize = p.min(p.windowWidth, p.windowHeight)
         }
 
         // Handle key press for saving (optional - can be removed if not needed)
@@ -208,7 +212,9 @@ export function SymmetryCanvas() {
         }
       }
 
-      sketchRef.current = new p5(sketch, containerRef.current)
+      if (containerRef.current) {
+        sketchRef.current = new p5(sketch, containerRef.current)
+      }
     })
 
     return () => {
