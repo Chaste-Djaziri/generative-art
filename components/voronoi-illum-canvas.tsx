@@ -338,18 +338,10 @@ void main() {
 
         p.mouseClicked = () => {
           t_var++
-          const monthStr = String(p.month() + 1).padStart(2, "0")
-          const dayStr = String(p.day()).padStart(2, "0")
-          const hourStr = String(p.hour()).padStart(2, "0")
-          const minuteStr = String(p.minute()).padStart(2, "0")
-          const secondStr = String(p.second()).padStart(2, "0")
-          p.save(`img_${monthStr}-${dayStr}_${hourStr}-${minuteStr}-${secondStr}.jpg`)
         }
 
         p.keyPressed = () => {
-          if (p.key === "S" || p.key === "s") {
-            p.save(cnv, "myCanvas.jpg", true)
-          } else if (show === "voronoi") {
+          if (show === "voronoi") {
             show = "distance"
           } else if (show === "distance") {
             show = "illum"

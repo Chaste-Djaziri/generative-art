@@ -204,12 +204,6 @@ export function SymmetryCanvas() {
           mySize = p.min(p.windowWidth, p.windowHeight)
         }
 
-        // Handle key press for saving (optional - can be removed if not needed)
-        p.keyTyped = () => {
-          if (p.key === "s" || p.key === "S") {
-            p.saveCanvas("genuary-20250126", "png")
-          }
-        }
       }
 
       if (containerRef.current) {

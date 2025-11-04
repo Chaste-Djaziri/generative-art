@@ -399,11 +399,6 @@ export function BlackWhiteGeometricCanvas() {
           }
         }
 
-        p.keyTyped = () => {
-          if (p.key === "s" || p.key === "S") {
-            p.saveCanvas("genuary-20250114", "png")
-          }
-        }
       }
 
       if (containerRef.current) {
