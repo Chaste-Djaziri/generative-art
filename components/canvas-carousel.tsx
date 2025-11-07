@@ -21,7 +21,7 @@ const CANVAS_COMPONENTS = [
 ]
 
 const TRANSITION_DURATION = 2000 // 2 seconds fade transition
-const DISPLAY_DURATION = 20000 // 20 seconds per canvas - longer viewing time
+const DISPLAY_DURATION = 300000 // 5 minutes per canvas
 
 export function CanvasCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0)

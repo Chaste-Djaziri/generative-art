@@ -13,10 +13,17 @@ body {
 
 .welcome-overlay {
   opacity: 0;
+  transform: translate3d(-60px, 0, 0);
 }
 
 .welcome-overlay--visible {
   animation: lowerThirdSlide 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+.welcome-overlay--hidden {
+  opacity: 0;
+  transform: translate3d(-40px, 0, 0);
+  transition: opacity 0.6s ease, transform 0.6s ease;
 }
 
 @keyframes lowerThirdSlide {
