@@ -11,6 +11,29 @@ body {
   overflow: hidden;
 }
 
+.welcome-overlay {
+  opacity: 0;
+}
+
+.welcome-overlay--visible {
+  animation: lowerThirdSlide 1s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+
+@keyframes lowerThirdSlide {
+  0% {
+    opacity: 0;
+    transform: translate3d(-60px, 0, 0);
+  }
+  70% {
+    opacity: 1;
+    transform: translate3d(10px, 0, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 #__next,
 body > div {
   width: 100%;

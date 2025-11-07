@@ -8,6 +8,7 @@ import { CellularGrowthCanvas } from "@/components/cellular-growth-canvas"
 import { PlanetTrailsV2Canvas } from "@/components/planet-trails-v2-canvas"
 import { BlackWhiteGeometricCanvas } from "@/components/black-white-geometric-canvas"
 import { VoronoiIllumCanvas } from "@/components/voronoi-illum-canvas"
+import { WelcomeOverlay } from "@/components/welcome-overlay"
 
 const CANVAS_COMPONENTS = [
   { id: "particle", component: ParticleCanvas },
@@ -61,7 +62,7 @@ export function CanvasCarousel() {
           </div>
         )
       })}
+      <WelcomeOverlay />
     </div>
   )
 }
-
